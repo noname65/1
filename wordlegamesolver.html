@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Title</title>
+        <script src="wordList.js"></script>
+        <style>
+            .letter{
+                border: 2px solid transparent !important;
+                color: #fff !important;
+                align-items: center;
+                border: 2px solid #dee1e9;
+                font-size: 28px;
+                font-weight: 700;
+                height: 56px;
+                margin: 3px;
+                text-transform: uppercase;
+                width: 56px;
+                border-radius: 5px;
+                color: #393e4c;
+                background: #fbfcff;
+                display: flex;
+                justify-content: center;
+            }
+            .no-select{
+                -moz-user-select: -moz-none; 
+                -khtml-user-select: none;
+                -webkit-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            .btn:not(.locked){
+                cursor: pointer;
+            }
+            .btn:not(.locked):active{
+                filter:brightness(0.7);
+            }
+            .btn.locked{
+                background-color:#888;
+            }
+            @media (pointer: fine) {
+                .btn:not(.locked):hover{
+                    filter:brightness(1.3);
+                }
+                .tab:hover {
+                    background-color: #ccc;
+                }
+            }
+            @media (pointer: coarse) {
+            }
+            @media (pointer: none) {
+            }
+            .letter1{
+                background-color: #a4aec4 !important;
+            }
+            .letter2{
+                background-color: #f3c237 !important;
+            }
+            .letter3{
+                background-color: #79b851 !important;
+            }
+            .row{
+                display: flex;
+                flex-direction: row;
+            }
+            .btn1{
+                color: white;
+                font-family: 'Source Sans Pro', sans-serif;
+                font-size: 18px;
+                padding: 6px 25px;
+                border-radius: 5px;
+                word-spacing: 10px;
+                width:fit-content;
+                border:0;
+                margin-left: 5px;
+            }
+            .btn1:not(.locked){
+                background-color: #04AA6D;
+            }
+            .btn1.locked{
+                background-color: #888;
+            }
+            .wordButton{
+                margin-right: 5px;
+                margin-bottom: 5px;
+                background-color: #fff;
+                border-radius: 0;
+                border:0;
+                width:5em;
+            }
+            .wordButton:hover{
+                background:#555;
+                color:#fff;
+            }
+            #wordInput{
+                font-size: 24px;
+            }
+            body{
+                display:flex;
+                flex-direction: column;
+                -moz-user-select: -moz-none; 
+                -khtml-user-select: none;
+                -webkit-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            .tabs {
+                display: flex;
+                list-style-type: none;
+                padding: 0;
+                margin: 0;
+            }
+            .tab {
+                padding: 10px 20px;
+                cursor: pointer;
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-bottom: none;
+                border-radius: 5px 5px 0 0;
+                margin-right: 5px;
+            }
+            .tab:active {
+                background-color: #888;
+            }
+            .active-tab {
+                background-color: #ccc;
+            }
+            .tab-content {
+                display: none;
+                padding: 20px;
+                padding-top: 0;
+                border: 1px solid #ccc;
+                border-radius: 0 0 5px 5px;
+                overflow-y: scroll;
+                -webkit-overflow-scrolling: touch;
+                min-height: 10px;
+                max-height: calc(100vh - 300px);
+            }
+            .active-content {
+                display: block;
+            }
+
+        </style>
+    </head>
+    <body>
+
+        <div class="row">
+            <div id="confirm" class="btn btn1" onclick="this.classList.contains('locked') || confirmWord()">&#x786e&#x8ba4</div>
+            <div id="restart" class="btn btn1" onclick="this.classList.contains('locked') || initialize()">&#x21bb;</div>
+
+        </div>
+        <div id="list"></div>
+        <div>
+            <input type="text" id="wordInput" maxlength="5" placeholder="Search">
+            <button id="changeButton" class="btn btn1">&#x4fee&#x6539&#x5355&#x8bcd</button>
+        </div>
+        <div id="progress"></div>
+        <ul class="tabs">
+            <li class="tab active-tab" data-tab="tab1" data-index="0">&#x6240&#x6709</li>
+            <li class="tab" data-tab="tab2" data-index="1">&#x53ef&#x80fd</li>
+            <li class="tab" data-tab="tab3" data-index="2">&#x5efa&#x8bae</li>
+        </ul>
+        <div id="tab1" class="tab-content active-content"></div>
+        <div id="tab2" class="tab-content"></div>
+        <div id="tab3" class="tab-content"></div>
+        <script type="text/javascript">
+            var currentWord;
+            const list = document.getElementById("list");
+            const wordInput = document.getElementById('wordInput');
+            const changeButton = document.getElementById('changeButton');
+            const wordButtonsDiv = document.getElementById('wordButtons');
+            const progressDiv = document.getElementById('progress');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            var lettersType = [1, 1, 1, 1, 1];
+            var exclude1 = [new Set(), new Set(), new Set(), new Set(), new Set()];
+            var exclude2 = new Set();
+            var include = {};
+            var includeState = {};
+            var correct = [null, null, null, null, null];
+            var possibleWords = [];
+            var suggestionWords = [];
+            var regexps = {};
+            var updateTabs = [true, true, true];
+            var selectedTab = 0;
+            const letters26 = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+            const vowels=['A','E','I','O','U'];
+            var sortWeight1 = 2;
+            var sortWeight2 = 1;
+            var sortWeight3 = 100;
+            const initialize = () => {
+                updateTabs = [true, true, true];
+                lettersType = [1, 1, 1, 1, 1];
+                for (let i of exclude1)
+                    i.clear();
+                exclude2.clear();
+                include = {};
+                correct = [null, null, null, null, null];
+                possibleWords = [];
+                suggestionWords = [];
+                list.innerHTML = '';
+                possibleWords = words;
+                suggestionWords = classifyStringsByUniqueChars(possibleWords)[5];
+                suggestionWords.sort((a,b)=>{
+                let A=0,B=0;
+                for(let i=0;i<5;i++){
+                    if(vowels.includes(a[i]))A++;
+                    if(vowels.includes(b[i]))B++;
+                }
+                return B-A;
+            });
+                currentWord = suggestionWords[0];
+                addWord(currentWord);
+                updateWordList();
+            };
+            const classifyStringsByUniqueChars = strings => {
+                const classified = {};
+                strings.forEach(str => {
+                    const uniqueCharsCount = new Set(str).size;
+                    if (!classified[uniqueCharsCount])
+                        classified[uniqueCharsCount] = [];
+                    classified[uniqueCharsCount].push(str);
+                });
+                return classified;
+            };
+            const updateWordList = () => {
+                updateTabs[selectedTab] = false;
+                const userInput = wordInput.value.toUpperCase();
+                let matchedWords;
+                if (userInput) {
+                    matchedWords = (selectedTab === 0 ? words : selectedTab === 1 ? possibleWords : suggestionWords).filter(word => word.includes(userInput));
+                    matchedWords.sort((a, b) => (a.indexOf(userInput) - b.indexOf(userInput)));
+                    matchedWords = classifyStringsByUniqueChars(matchedWords);
+                } else
+                    matchedWords = classifyStringsByUniqueChars(selectedTab === 0 ? words : selectedTab === 1 ? possibleWords : suggestionWords);
+                tabContents[selectedTab].innerHTML = '';
+                let group;
+                for (let i = 5, j = 5; i > 0; i--) {
+                    if (!matchedWords[i]) {
+                        j = i - 1;
+                        continue;
+                    }
+                    if (i !== j)
+                        tabContents[selectedTab].appendChild(document.createElement('hr'));
+                    group = document.createElement('div');
+                    tabContents[selectedTab].appendChild(group);
+                    matchedWords[i].forEach(word => {
+                        const button = document.createElement('button');
+                        button.textContent = word;
+                        button.className = 'wordButton btn';
+                        button.addEventListener('click', () => {
+                            changeWord(word);
+                        });
+                        group.appendChild(button);
+                    });
+                }
+            };
+            wordInput.addEventListener('input', () => {
+                for (let i = 0; i < 3; i++)
+                    if (selectedTab !== i)
+                        updateTabs[i] = true;
+                updateWordList();
+            });
+            //progressDiv.innerText=typeof words;
+            //updateWordList();
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active-tab'));
+                    tabContents.forEach(content => content.classList.remove('active-content'));
+                    tab.classList.add('active-tab');
+                    const tabId = tab.getAttribute('data-tab');
+                    selectedTab = parseInt(tab.getAttribute('data-index'));
+                    if (updateTabs[selectedTab])
+                        updateWordList();
+                    document.getElementById(tabId).classList.add('active-content');
+                });
+            });
+            changeButton.addEventListener('click', () => {
+                const userInput = wordInput.value.toUpperCase();
+                if (userInput.length === 5)
+                    changeWord(userInput);
+                else
+                    alert('Please enter 5 letters.');
+            });
+            const changeWord = word => {
+                currentWord = word;
+                for (let i = 0; i < 5; i++)
+                    list.lastChild.children[i].innerText = word[i];
+            };
+            for (let i of letters26)
+                regexps[i] = new RegExp(i, 'g');
+            const changeLetterType = index => list.lastChild.children[index].className = "btn letter letter" + (lettersType[index] === 3 ? (lettersType[index] = 1) : (++lettersType[index]));
+            const addWord = (word) => {
+                currentWord = word;
+                for (let i = 0; i < 5; i++)
+                    lettersType[i] = correct[i]==word[i] ? 3 : 1;
+                list.innerHTML += `<div class="row">
+        <div class="btn letter letter${lettersType[0]}" onclick="this.classList.contains('locked')||changeLetterType(0)">${word[0]}</div>
+        <div class="btn letter letter${lettersType[1]}" onclick="this.classList.contains('locked')||changeLetterType(1)">${word[1]}</div>
+        <div class="btn letter letter${lettersType[2]}" onclick="this.classList.contains('locked')||changeLetterType(2)">${word[2]}</div>
+        <div class="btn letter letter${lettersType[3]}" onclick="this.classList.contains('locked')||changeLetterType(3)">${word[3]}</div>
+        <div class="btn letter letter${lettersType[4]}" onclick="this.classList.contains('locked')||changeLetterType(4)">${word[4]}</div>
+        </div>`;
+            };
+            const lockLastRow = () => {
+                for (let i of list.lastChild.children)
+                    i.classList.add("locked");
+            };
+            const confirmWord = () => {
+                lockLastRow();
+                recordWordState();
+                findPossibleWords();
+                judge();
+                //suggestionWords = (suggestionWords = classifyStringsByUniqueChars(possibleWords))[5] || suggestionWords[4] || suggestionWords[3] || suggestionWords[2];
+                if (suggestionWords === undefined) {
+                    alert("\u5355\u8bcd\u5217\u8868\u4e2d\u6ca1\u6709\u8fd9\u4e2a\u5355\u8bcd");
+                    return;
+                }
+                addWord(suggestionWords[0]);
+                updateTabs[1] = true;
+                updateTabs[2] = true;
+                if (selectedTab === 1 || selectedTab === 2)
+                    updateWordList();
+            };
+            const recordWordState = () => {
+                var temp_include = {};
+                for (let i = 0; i < 5; i++)
+                    if (lettersType[i] === 2) {
+                        includeState[currentWord[i]] && temp_include[currentWord[i]] ? temp_include[currentWord[i]]++ : (temp_include[currentWord[i]] = 1);
+                        exclude1[i].add(currentWord[i]);
+                    } else if (lettersType[i] === 3) {
+                        includeState[currentWord[i]] && temp_include[currentWord[i]] ? temp_include[currentWord[i]]++ : (temp_include[currentWord[i]] = 1);
+                        correct[i] = currentWord[i];
+                    }
+                for (let i in temp_include)
+                    if ((!include[i]) || temp_include[i] > include[i])
+                        include[i] = temp_include[i];
+                for (let i = 0; i < 5; i++)
+                    if (lettersType[i] === 1) {
+                        if (include[currentWord[i]])
+                            includeState[currentWord[i]] = true;
+                        else
+                            exclude2.add(currentWord[i]);
+                    }
+            };
+            const findPossibleWords = () => {
+                var re = "";
+                for (let i = 0; i < 5; i++)
+                    re += correct[i] || `[^${Array.from(exclude1[i]).join('')}${Array.from(exclude2).join('')}]`;
+                re = new RegExp(re);
+                let temp = true;
+                let result = [];
+                for (let i of possibleWords)
+                    if (re.test(i)) {
+                        for (let j in include)
+                            if (!(temp = ((temp = i.match(regexps[j])) !== null && temp.length >= include[j])))
+                                break;
+                        if (temp)
+                            result.push(i);
+                    }
+
+                possibleWords = result;
+            };
+            const judge = () => {
+                if(possibleWords.length<=2){
+                    suggestionWords=possibleWords;
+                    return;
+                }
+                var appearingLetters = new Set();
+                var notExclude = new Set();
+                for (let i of possibleWords)
+                    for (let j of i) {
+                        appearingLetters.add(j);
+                        if (appearingLetters.size >= 26)
+                            break;
+                    }
+                for (let i of letters26)
+                    if (!appearingLetters.has(i))
+                        exclude2.add(i);
+                    else if (!(exclude2.has(i) || include[i]))
+                        notExclude.add(i);
+                var includeSet = {};
+                var temp;
+                for (let i in include)
+                    if (correct.includes(i)) {
+                        temp = correct.filter(a => a == i).length;
+                        if (include[i] > temp)
+                            includeSet[i] = include[i] - temp;
+                    } else
+                        includeSet[i] = include[i];
+                const nere = new RegExp(`[${Array.from(notExclude).join('')}]`, 'g');
+                var filterRe='';
+                for(var i=0;i<5;i++)filterRe+=`[^${Array.from(exclude2).join('')}${Array.from(exclude1[i]).join('')}]`;
+                filterRe=new RegExp(filterRe);
+                suggestionWords = words.filter(a => filterRe.test(a));
+                suggestionWords.sort((a, b) => {
+                    const neA = (a.match(nere) || []).length;
+                    const neB = (b.match(nere) || []).length;
+                    let isA = 0;
+                    let isB = 0;
+                    for (let i in includeSet) {
+                        isA += Math.min((a.match(regexps[i]) || []).length, includeSet[i]);
+                        isB += Math.min((b.match(regexps[i]) || []).length, includeSet[i]);
+                    }
+                    const uniqueA = (new Set(a)).size;
+                    const uniqueB = (new Set(b)).size;
+                    const sumA = neA * sortWeight1 + isA * sortWeight2 + uniqueA * sortWeight3;
+                    const sumB = neB * sortWeight1 + isB * sortWeight2 + uniqueB * sortWeight3;
+                    return sumB - sumA;
+                });
+            };
+            //var words = [];
+            //for (let i = 0; i < 13000; i++)
+            //    words.push(String.fromCharCode(65 + ~~(Math.random() * 26)) + String.fromCharCode(65 + ~~(Math.random() * 26)) + String.fromCharCode(65 + ~~(Math.random() * 26)) + String.fromCharCode(65 + ~~(Math.random() * 26)) + String.fromCharCode(65 + ~~(Math.random() * 26)));
+            possibleWords = words;
+            suggestionWords = classifyStringsByUniqueChars(possibleWords)[5];
+            suggestionWords.sort((a,b)=>{
+                let A=0,B=0;
+                for(let i=0;i<5;i++){
+                    if(vowels.includes(a[i]))A++;
+                    if(vowels.includes(b[i]))B++;
+                }
+                return B-A;
+            });
+            currentWord = suggestionWords[0];
+            addWord(currentWord);
+            updateWordList();
+        </script>
+    </body>
+</html>
